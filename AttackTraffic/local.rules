@@ -1,0 +1,45 @@
+
+# $Id: local.rules,v 1.11 2004/07/23 20:15:44 bmc Exp $
+# ----------------
+# LOCAL RULES
+# ----------------
+# This file intentionally does not come with signatures.  Put your local
+# additions here.
+#nmap
+#alert tcp any any -> $HOME_NET any (msg:"TCP port scanning"; detection_filter:track by_src, count 30, seconds 60; sid:1000006; rev:2;)
+#alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"Nmap scan FYN"; flow:stateless; flags:F, 12; reference:arachnids,27; classtype:attempted-recon; gid:1000020; sid:1000020; rev:4;)
+#to be tested (for fun)
+
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"Slowloris DoS attempt"; flow:established,to_server,no_stream; dsize:<15; content:"X-a"; detection_filter:track by_dst, count 3, seconds 30;  classtype:denial-of-service; sid:1; rev:1;)
+alert tcp any any -> any 80 (msg:"Possible Slowloris"; flow:to_server,established; content:"X-a|3a| "; distance:0; pcre:"/\d\d\d\d/"; distance:0;content:"|0d 0a|";sid:10000007;)
+
+#alert icmp any any -> $HOME_NET any (msg:"ICMP test"; sid:10000004; rev:1;)
+#alert tcp any any -> $HOME_NET 22 (msg:"NMAP TCP Scan"; sid:10000005; rev:2;)
+#alert udp any any -> $HOME_NET any (msg:"NMAP UDP Scan"; sid:1000010; rev:1;)
+alert tcp any any -> $HOME_NET 21 (msg:"FTP connection attempt"; sid:1000002; rev:1;)
+
+#basic
+#alert tcp any any -> $HOME_NET 80 (msg:"TELNET connection attempt"; sid:1000001; rev:1;)
+
+# Unable to do
+alert tcp $EXTERNAL_NET any -> $HOME_NET 9200 (msg:"SERVER_OTHERR ElasticSearch script remote code execution attempt"; flow:to_server,established; content:"POST"; depth:4; content:"_search"; distance:0; content:"import java."; fast_pattern:only; metadata:service http; reference:cve,2014-3120; reference:url,bouk.co/blog/elasticsearch-rce/; classtype:attempted-user; sid:33830; rev:2;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 9200 (msg:"SERVER-OTHER ElasticSearch information disclosure attempt"; flow:to_server, established; content:"POST"; depth:4; content:"_search"; distance:0; content:"script"; nocase; content:"System."; distance:0; nocase; metadata:service http; reference:cve,2014-3120; reference:url,bouk.co/blog/elasticsearch-rce/; classtype:policy-violation; sid:36256; rev:1;)
+# FTP
+#alert tcp $HOME_NET 21 -> $EXTERNAL_NET any (msg:"FTP Bad login"; flow:from_server,established; classtype:unsuccessful-user; sid:9000000; rev:1;)
+#alert tcp $HOME_NET 21 -> $EXTERNAL_NET any (msg:"FTP Potential Brute-Force attempt"; flow:from_server,established; classtype:unsuccessful-user; threshold: type threshold, track by_dst, count 5, seconds 300; sid:9000002; rev:1;)
+# SSH
+alert tcp $EXTERNAL_NET any -> $HOME_NET 22 (msg:"INDICATOR_SCAN SSH brute force login attempt"; flow:to_server,established; content:"SSH-"; depth:4; detection_filter:track by_src, count 5, seconds 60; metadata:service ssh; reference:cve,2012-6066; reference:cve,2015-5600; classtype:misc-activity; sid:19559; rev:7;)
+# Jenkins
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"APP-DETECT Jenkins Groovy script access through script console attempt"; flow:to_server,established; content:"POST /script"; fast_pattern:only; metadata:service http; reference:url,github.com/rapid7/metasploit-framework/blob/master/modules/exploits/multi/http/jenkins_script_console.rb; reference:url,wiki.jenkins-ci.org/display/JENKINS/Jenkins+Script+Console; classtype:policy-violation; sid:37354; rev:1;)
+# Unable to do -----------------------------------------------------------------------------------
+alert tcp $EXTERNAL_NET any -> $HOME_NET 8282 (msg:"SERVER-APACHE Apache Struts remote code execution attempt"; flow:to_server,established; content:"|23|_memberAccess"; fast_pattern:only; http_uri; content:"new "; nocase; http_uri; pcre:"/new\s+(java|org|sun)/Ui"; metadata:policy balancced-ips drop, policy security-ips drop, service http; reference:cve,2016-3087; reference:url,struts.apache.org/docs/s2-033.html; classtype:attempted-admin; sid:39191; rev:1;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 8282 (msg:"SERVER-APACHE Apache Struts remote code execution attempt"; flow:to_server,established; content:"|23|_memberAccess"; fast_pattern:only; http_uri; content:"@java.lang."; nocase; http_uri; metadata:policy balanced-ips drop, policy security-ips drop, service http; reference:cve,2016-3087; reference:url,struts.apache.org/docs/s2-033.html; classtype:attempted-admin; sid:39190; rev:1;)
+# Unable to do-----------------------------------------------------------------------------
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"SERVER_WEBAPP ManageEngine Desktop Central FileUploadServlet directory traversal attempt"; flow:to_server,established; content:"rds_file_upload"; fast_pattern:only; pcre:"/(^|&) (computerName|checkSumvalue|connectionId)=[^&]*?(\x2e|%2e){2}([\x2f\x5c]|%2f|%5c)/Pim"; metadata:policy security-ips drop, servicehttp; reference:cve,2015-8249; reference:url,osvdb.org/show/osvdb/121816; classtype:web-application-attack; sid:34718; rev:3;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"SERVER-WEBAPP ManageEngine Desktop Central FileUploadServlet directory traversal attempt"; flow:to_server,established; content:"rds_file_upload"; fast_pattern:only; content:"name"; nocase; http_client_body; pcre:"/name\s*=\s*[\x22\x27]?(computerName|checkSumvalue|connectionId)((?!^-- ).)*?\x2e\x2e[\x2f\x5c]/Psim"; metadata:policy security-ips drop, service http; reference:cve,2015-8249; reference:url,osvdb.org/show/osdvb/121816; classtype:web-application-attack; sid:34717; rev:3;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"SERVER_WEBAPP ManageEngine Desktop Central FileUploadServlet direcotry traversal attempt"; flow:to_server,established; content:"rds_file_upload"; fast_pattern:only; content:"../"; http_uri; pcre:"/[?&](computerName|checkSumvalue|connectionId)=[^&]*?\x2e\x2e\x2f/Ui"; metadata:policy security-ips drop, service http; reference:cve,2015-8249; reference:url,osdvb.org/show/osdvb/121816; classtype:web-application-attack; sid:34716; rev:3;)
+#---------------------------------------------------------------------------------------------------
+# False Positive
+#alert udp $EXTERNAL_NET any -> $HOME_NET 123 (msg:"SERVER-OTHER NTP arbitrary pidfile and driftfile overwrite attempt"; flow:to_server; content:"pidfile"; fast_pattern:only; metadata:policy balanced-ips drop, service ntp; reference:bugtraq,77278; reference:cve,2015-7703; reference:url,support.ntp.org/bin/view/Main/NtpBug2902; classtype:policy-violation; sid:37526; rev:2;)
+#alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"MALWARE-CNC Win.Trojan.Rbrute inbound connection"; flow:to_server; dsize:4; content:"|BE BA FE CA|"; fast_pattern:only; metadata:impact_flag red, policy balanced-ips drop, policy security-ips drop; reference:url,www.virustotal.com/en/file/eec964dd018ad0c40ff3d7f3a3938350522119122a0cc9711212950fc06b14a0/analysis/; classtype:trojan-activity; sid:30882; rev:2;)
+#alert udp $EXTERNAL_NET any -> $HOME_NET [16464,16465,16470,16471] (msg:"MALWARE-CNC Win.Trojan.ZeroAccess inbound connection"; flow:to_server; dsize:16; content:"|28 94 8D AB|"; depth:4; offset:4; metadata:impact_flag red, policy balanced-ips drop, policy connectivity-ips drop, policy security-ips drop, ruleset community; reference:url,www.virustotal.com/file/50cdd9f6c5629630c8d8a3a4fe7d929d3c6463b2f9407d9a90703047e7db7ff9/analysis/; classtype:trojan-activity; sid:31136; rev:2;)

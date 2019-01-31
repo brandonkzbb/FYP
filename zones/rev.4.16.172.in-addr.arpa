@@ -1,0 +1,9 @@
+@ IN SOA N4.com. host.domain.com. (
+2010081401;
+28800;
+604800;
+604800;
+86400 );
+
+IN NS ns.N4.com.
+4 IN PTR N4.com.

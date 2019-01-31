@@ -1,0 +1,15 @@
+; BIND data file for N4.com
+;
+$TTL 14400
+@ IN SOA ns1.N4.com. host.N4.com. (
+201006601 ; Serial
+7200 ; Refresh
+120 ; Retry
+2419200 ; Expire
+604800) ; Default TTL 
+;
+N4.com. IN NS ns1.N4.com.
+N4.com. IN A 172.16.4.4
+
+ns1 IN A 172.16.4.4
+www IN CNAME N4.com.
